@@ -1,0 +1,1 @@
+../../../skills/git-curate/SKILL.md

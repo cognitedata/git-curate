@@ -1,0 +1,36 @@
+[tools]
+python = "3.13"
+uv = "latest"
+
+# Execution order for `mise run check`:
+#
+#   lint ──► typecheck ─┐
+#        └─► test      ─┴─► (done)
+#
+# `depends` builds a DAG: a task starts as soon as all its dependencies finish.
+# Because both `typecheck` and `test` depend on `lint`, mise runs `lint` first,
+# then starts `typecheck` and `test` concurrently. This prevents ruff from
+# reformatting files while pytest is reading them.
+# Running `mise run test` or `mise run typecheck` directly also triggers `lint` first.
+
+[tasks.lint]
+run = ["uv run ruff check --fix .", "uv run ruff format ."]
+description = "Lint and format with ruff"
+
+[tasks.typecheck]
+depends = ["lint"]
+run = "uv run mypy src/ tests/"
+description = "Type check with mypy"
+
+# Quality checks that don't trivially allow arbitrary code execution, like tests do:
+[tasks.pre-test]
+depends = ["lint", "typecheck"]
+
+[tasks.test]
+depends = ["pre-test"]
+run = "uv run pytest"
+description = "Run test suite"
+
+[tasks.check]
+depends = ["typecheck", "test"]
+description = "Format first, then typecheck+test in parallel"

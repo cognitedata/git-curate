@@ -1,0 +1,96 @@
+"""End-to-end tests: staged changes → slice → harness → final commits."""
+
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
+from git_curate.cli import app
+from git_curate.common import CURATE_AUTHOR_EMAIL, git, list_commits, resolve_base
+from git_curate.harness import BaseHarness
+from git_curate.harness.claude import ClaudeHarness
+from git_curate.harness.pi import PiHarness
+from git_curate.slice import slice_hunks
+
+runner = CliRunner()
+
+
+class StubHarness(BaseHarness):
+    """Groups all temp commits into a single final commit without invoking an AI."""
+
+    def _run(self, base_sha: str, repo_root: str, temp_dir: str, spec_path: str) -> None:
+        commits = list_commits(base_sha)
+        spec = [
+            {
+                "message": "test: grouped by stub harness",
+                "commits": [c.message for c in commits],
+            }
+        ]
+        Path(spec_path).write_text(json.dumps(spec))
+        result = runner.invoke(app, ["group", "--spec", spec_path, "--keep-spec"])
+        if result.exit_code != 0:
+            raise RuntimeError(f"git-curate group failed:\n{result.output}")
+
+
+@pytest.fixture()
+def staged_repo(git_repo: Path) -> Path:
+    """Extend git_repo with a modified file and a new file, both staged."""
+    (git_repo / "README.md").write_text("# repo\n\nExpanded content.\n")
+    (git_repo / "main.py").write_text("def hello():\n    print('hello')\n")
+    git.add(".")
+    return git_repo
+
+
+def _assert_session_complete(initial_commits: int = 1) -> None:
+    assert resolve_base() is None, "Session still active after grouping"
+    log = str(git.log("--oneline")).strip().splitlines()
+    assert len(log) > initial_commits, "No new commits produced; log:\n" + "\n".join(log)
+    temp_authors = [a for a in str(git.log("--format=%ae")).strip().splitlines() if a.strip() == CURATE_AUTHOR_EMAIL]
+    assert not temp_authors, f"Temp commits still present after grouping ({len(temp_authors)} found)"
+
+
+def test_stub_harness(staged_repo: Path) -> None:
+    n = slice_hunks(paths=[])
+    assert n > 0
+
+    base_sha = resolve_base()
+    assert base_sha is not None
+
+    StubHarness().run(base_sha)
+
+    _assert_session_complete()
+    log = str(git.log("--oneline")).strip().splitlines()
+    assert len(log) == 2
+    assert "test: grouped by stub harness" in log[0]
+
+
+@pytest.mark.claude
+@pytest.mark.skipif(shutil.which("claude") is None, reason="claude CLI not installed")
+def test_claude_harness(staged_repo: Path) -> None:
+    n = slice_hunks(paths=[])
+    assert n > 0
+
+    base_sha = resolve_base()
+    assert base_sha is not None
+
+    ClaudeHarness().run(base_sha)
+
+    _assert_session_complete()
+
+
+@pytest.mark.pi
+@pytest.mark.skipif(shutil.which("pi") is None, reason="pi CLI not installed")
+def test_pi_harness(staged_repo: Path) -> None:
+    n = slice_hunks(paths=[])
+    assert n > 0
+
+    base_sha = resolve_base()
+    assert base_sha is not None
+
+    PiHarness().run(base_sha)
+
+    _assert_session_complete()

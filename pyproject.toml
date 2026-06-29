@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "git-curate"
+version = "0.1.0"
+description = "Slice unstaged changes into atomic commits, then group them into logical final commits"
+requires-python = ">=3.11"
+dependencies = ["sh", "typer", "rich"]
+
+[project.scripts]
+git-curate = "git_curate.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/git_curate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-n auto"
+markers = [
+    "claude: invoke the real Claude CLI harness (run with -m claude)",
+    "pi: invoke the real Pi CLI harness (run with -m pi)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:sh",
+    # flag_value/is_flag are Typer-deprecated but work correctly; suppress test noise
+    "ignore::DeprecationWarning:typer.params",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
+
+[tool.ty.src]
+exclude = [".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ty.environment]
+python = ".venv"
+
+[tool.mypy]
+python_version = "3.13"
+show_error_codes = true
+follow_imports = "normal"
+local_partial_types = true
+strict_equality = true
+no_implicit_optional = true
+warn_incomplete_stub = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+enable_error_code = [
+    "deprecated",
+    "ignore-without-code",
+    "redundant-self",
+    "truthy-iterable",
+]
+disable_error_code = ["import-untyped"]
+extra_checks = false
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unreachable = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.0",
+    "pytest>=9.0.3",
+    "pytest-github-actions-annotate-failures",
+    "pytest-randomly>=4.1.0",
+    "pytest-xdist>=3.8.0",
+    "ruff",
+    "ty",
+]
