@@ -167,6 +167,8 @@ class ClaudeHarness(BaseHarness):
             ),
             "--output-format",
             "stream-json",
+            # Need --verbose when mixing stream-json and -p:
+            "--verbose",
             "-p",
             prompt,
         ]
