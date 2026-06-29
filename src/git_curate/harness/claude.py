@@ -187,4 +187,11 @@ class ClaudeHarness(BaseHarness):
             print("error: 'claude' CLI not found. Install Claude Code to use this harness.", file=sys.stderr)
             raise CLINotFoundError() from e
         except sh.ErrorReturnCode as e:
+            print("\nclaude exited with an error, re-running to capture output…", file=sys.stderr, flush=True)
+            try:
+                sh.claude(*args, _cwd=repo_root, _in=os.devnull)
+            except sh.ErrorReturnCode as e2:
+                for stream in (e2.stdout, e2.stderr):
+                    if stream:
+                        print(stream.decode(errors="replace"), file=sys.stderr, flush=True)
             raise Exit(e.exit_code) from e
