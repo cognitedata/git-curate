@@ -127,7 +127,7 @@ Build, tooling, and config changes are isolated from feature work.
 
 ### Test code grouping
 
-Regression tests for bug fixing of existing code should its own commit and precede the fix, to enable easy verification that the test fails without the fix.
+Regression tests for bug fixing of existing code should get its own commit and precede the fix, to enable easy verification that the test fails without the fix.
 
 New features should have their tests grouped with the feature implementation, not in a separate commit.
 
