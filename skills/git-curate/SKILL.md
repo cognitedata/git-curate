@@ -125,13 +125,23 @@ Dead code removal belongs with the refactor that made it dead, not as a trailing
 
 Build, tooling, and config changes are isolated from feature work.
 
+### Test code grouping
+
+Regression tests for bug fixing of existing code should get its own commit and precede the fix, to enable easy verification that the test fails without the fix.
+
+New features should have their tests grouped with the feature implementation, not in a separate commit.
+
+Test infrastructure changes, e.g. refactoring test helpers or setup, belong in their own commit.
+
+Larger tests that integrate multiple features belong in a separate commit after the features they test. E.g commits ["Add and test feature A", "Add and test feature B", "Add integration test for A and B working together"].
+
+If ambigous, err on separate commits, as subsequent user squashing is easy.
+
 ### Order commits
 
 Order commits topologically: if commit B depends on commit A, A comes first. Dependencies can span files, so assess the nature of each change when ordering.
 
-Keep related commits adjacent. Prefer: Add A, Test A, Add B, Test B. Not: Add A, Add B, Test A, Test B.
-
-When a test is a regression test identifying an existing bug, put the test commit before the fix.
+Keep related commits adjacent. Prefer: Add A, Use A, Add B, Use B. Not: Add A, Add B, Use A, Use B.
 
 Type and interface definitions precede their implementations.
 
